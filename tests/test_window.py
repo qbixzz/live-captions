@@ -30,12 +30,15 @@ def main():
     ui_q, rec = queue.Queue(), Recorder(s.path(s.sessions_dir))
     audio = Audio(a.audio, a.start, mute=True)
     cap = Captioner(ui_q, rec, s)
-    win = Window(ui_q, cap, rec, audio, s)
+    # visible to screenshots, and its own window-state file so your saved position is not touched
+    win = Window(ui_q, cap, rec, audio, s, hide_from_capture=False, state_file=os.path.join(a.out, "window.json"))
     threading.Thread(target=lambda: (cap.load(), audio.run(), cap.run(audio)), daemon=True).start()
     r = win.root
 
-    def snap(name):
-        ImageGrab.grab(all_screens=True).save(os.path.join(a.out, name))
+    def snap(name):  # the caption window only
+        r.update_idletasks()
+        x, y, w_, h = r.winfo_rootx(), r.winfo_rooty(), r.winfo_width(), r.winfo_height()
+        ImageGrab.grab(bbox=(x, y, x + w_, y + h), all_screens=True).save(os.path.join(a.out, name))
 
     def resize():  # as if the corner were dragged 300 px left and 120 px down
         class E:
@@ -54,7 +57,8 @@ def main():
     r.after(w + 4500, lambda: snap("3_resized.png"))
     r.after(w + 5000, win.quit)
     r.mainloop()
-    print("lines:", len(win.lines), "screenshots in", a.out)
+    print("lines:", len(win.lines), "screenshots in", a.out, flush=True)
+    os._exit(0)  # skip interpreter shutdown while the caption threads still run
 
 
 if __name__ == "__main__":

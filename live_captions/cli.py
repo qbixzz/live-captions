@@ -2,6 +2,7 @@
 import argparse
 import os
 import queue
+import sys
 import threading
 
 from . import config
@@ -23,6 +24,8 @@ def parser():
     ap.add_argument("--terms", help="terms file for Whisper (default: terms.txt)")
     ap.add_argument("--device", choices=["cuda", "cpu"], help="cuda (default) or cpu (very slow)")
     ap.add_argument("--sessions", help="folder for recordings (default: sessions)")
+    ap.add_argument("--show-in-capture", action="store_true",
+                    help="let screen sharing and screenshots see the window (it is hidden by default)")
     ap.add_argument("--quit-after", type=float, default=0, help="close by itself after this many seconds (for tests)")
     ap.add_argument("--snap", help="with --quit-after: save a screenshot here 2 s before closing (for tests)")
     return ap
@@ -69,11 +72,15 @@ def main(argv=None):
     ui_q, rec = queue.Queue(), Recorder(s.path(s.sessions_dir))
     audio = Audio(a.sim, a.start, mute=a.mute)
     cap = Captioner(ui_q, rec, s)
-    win = Window(ui_q, cap, rec, audio, s)
+    win = Window(ui_q, cap, rec, audio, s, hide_from_capture=False if a.show_in_capture else None)
     if a.quit_after:
         if a.snap:
             from PIL import ImageGrab
-            win.root.after(int((a.quit_after - 2) * 1000), lambda: ImageGrab.grab(all_screens=True).save(a.snap))
+            def snap():  # the caption window only, not the rest of the screen
+                r = win.root
+                x, y, w, h = r.winfo_rootx(), r.winfo_rooty(), r.winfo_width(), r.winfo_height()
+                ImageGrab.grab(bbox=(x, y, x + w, y + h), all_screens=True).save(a.snap)
+            win.root.after(int((a.quit_after - 2) * 1000), snap)
         win.root.after(int(a.quit_after * 1000), win.quit)
 
     def boot():
@@ -87,6 +94,11 @@ def main(argv=None):
             ui_q.put(("status", f"error: {e}"))
     threading.Thread(target=boot, daemon=True).start()
     win.root.mainloop()
+    # The window is closed and any recording saved. Leave now: a normal interpreter shutdown can stall or print a
+    # "Fatal Python error" while the background threads still hold the console.
+    sys.stdout.flush()
+    sys.stderr.flush()
+    os._exit(0)
 
 
 if __name__ == "__main__":

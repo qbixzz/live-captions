@@ -26,7 +26,11 @@ max_len = 8.0
 sessions_dir = "sessions"
 
 [window]
+# Hide the caption window from screen sharing (Zoom, Teams, ...) and screenshots, so others never see it even when you
+# share the whole screen. Needs Windows 10 version 2004 or newer. You can also switch it in the right-click menu.
+hide_from_capture = true
+# Starting text size and opacity; changes you make in the window are remembered for next time.
 font_size = 22
 thai_font = "Leelawadee UI"
 latin_font = "Segoe UI"
-opacity = 0.94
+opacity = 1.0

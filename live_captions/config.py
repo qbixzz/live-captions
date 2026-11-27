@@ -22,7 +22,7 @@ SECTIONS = {
     "models": ("whisper", "nllb", "device", "compute_type"),
     "captions": ("terms_file", "context", "pause", "max_len"),
     "recording": ("sessions_dir",),
-    "window": ("font_size", "thai_font", "latin_font", "opacity"),
+    "window": ("font_size", "thai_font", "latin_font", "opacity", "hide_from_capture"),
 }
 
 
@@ -46,7 +46,8 @@ class Settings:
     font_size: int = 22
     thai_font: str = "Leelawadee UI"
     latin_font: str = "Segoe UI"
-    opacity: float = 0.94
+    opacity: float = 1.0
+    hide_from_capture: bool = True   # keep the window out of screen sharing and screenshots (Windows 10 2004 or newer)
 
     def path(self, p):
         p = os.path.expanduser(os.path.expandvars(p))

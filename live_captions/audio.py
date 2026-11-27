@@ -31,6 +31,9 @@ class Audio:
         self.sim, self.start, self.mute = sim, start, mute
         self.stop = threading.Event()
         self.mic_ok = False
+        self.level = {"them": 0.0, "me": 0.0}   # loudness (RMS) of the latest block, for the window's level meter
+        self.names = {}                          # device (or file) name per side, for the window
+        self.errors = []                         # devices that could not be opened
 
     def run(self):
         """One PyAudio for all streams, opened one after another (two PyAudio instances set up at once in two threads can hang)."""
@@ -51,7 +54,7 @@ class Audio:
             except Exception:
                 pass
 
-    def _open(self, dev, q, name):
+    def _open(self, dev, q, who, name):
         import pyaudiowpatch as pyaudio
         rate, ch = int(dev["defaultSampleRate"]), max(1, int(dev["maxInputChannels"]))
 
@@ -59,40 +62,46 @@ class Audio:
             x = np.frombuffer(data, np.int16).astype(np.float32) / 32768.0
             if ch > 1:
                 x = x.reshape(-1, ch).mean(axis=1)
-            q.put(resample_poly(x, SR, rate).astype(np.float32) if rate != SR else x)
+            x = resample_poly(x, SR, rate).astype(np.float32) if rate != SR else x
+            self.level[who] = float(np.sqrt(np.mean(x * x))) if len(x) else 0.0
+            q.put(x)
             return (None, pyaudio.paContinue)
 
         st = self.pa.open(format=pyaudio.paInt16, channels=ch, rate=rate, input=True, input_device_index=dev["index"],
                           frames_per_buffer=int(rate * 0.1), stream_callback=cb)
         print(f"[audio] {name}: {dev['name']} ({rate} Hz, {ch} ch)", flush=True)
+        self.names[who] = dev["name"].replace(" [Loopback]", "")
         return st
 
     def _loopback(self):
         try:
             dev = self.pa.get_default_wasapi_loopback()
-            st = self._open(dev, self.q_them, "speaker output")
+            st = self._open(dev, self.q_them, "them", "speaker output")
             st.start_stream()
             self.streams.append(st)
         except Exception as e:
             print("[audio] speaker output not opened:", e, flush=True)
+            self.errors.append(f"speaker output: {e}")
 
     def _mic(self):
         import pyaudiowpatch as pyaudio
         try:
             api = self.pa.get_host_api_info_by_type(pyaudio.paWASAPI)
             dev = self.pa.get_device_info_by_index(api["defaultInputDevice"])
-            st = self._open(dev, self.q_me, "microphone")
+            st = self._open(dev, self.q_me, "me", "microphone")
             st.start_stream()
             self.streams.append(st)
             self.mic_ok = True
         except Exception as e:
             print("[audio] microphone not opened:", e, flush=True)
+            self.errors.append(f"microphone: {e}")
 
     def _sim(self):
         """Rehearsal: play the file through the speakers and feed the same audio, in step, 0.1 s at a time."""
         import pyaudiowpatch as pyaudio
         pcm = read_file(self.sim, self.start)
         print(f"[sim] {os.path.basename(self.sim)}: {len(pcm) / SR / 60:.1f} min from {self.start:.0f} s", flush=True)
+        self.names["them"] = os.path.basename(self.sim)
         out = None if self.mute else self.pa.open(format=pyaudio.paFloat32, channels=1, rate=SR, output=True)
         n = SR // 10
         for i in range(0, len(pcm), n):
@@ -103,7 +112,9 @@ class Audio:
                 out.write(blk.tobytes())  # blocks for 0.1 s: real-time pace
             else:
                 time.sleep(0.1)
+            self.level["them"] = float(np.sqrt(np.mean(blk * blk))) if len(blk) else 0.0
             self.q_them.put(blk)
+        self.level["them"] = 0.0
         if out:
             out.close()
         print("[sim] end of file", flush=True)

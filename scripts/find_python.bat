@@ -15,7 +15,7 @@ if defined LIVE_CAPTIONS_PYTHON (
 "%PY%" -c "import faster_whisper, transformers, pyaudiowpatch" 2>nul
 if errorlevel 1 (
   echo The Python at "%PY%" cannot load the packages live captions needs.
-  echo See README.md, "Install", or set LIVE_CAPTIONS_PYTHON in local.bat.
+  echo Double-click setup.bat first. To use a Python you already have, see README.md, Install.
   exit /b 1
 )
 exit /b 0

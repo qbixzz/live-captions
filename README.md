@@ -28,9 +28,24 @@ Everything runs on your own computer, on the GPU. No audio or text is sent anywh
 
 ## Install
 
-### With uv (recommended)
+### Quick setup
 
-Run this in the repo folder:
+1. Install [uv](https://docs.astral.sh/uv/) if you don't have it. Run this in PowerShell:
+
+   ```powershell
+   powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+   ```
+2. Double-click **`setup.bat`**. It does three things:
+   - installs the packages into `.venv`, with the CUDA build of PyTorch (`uv sync`)
+   - checks that the GPU can be used
+   - downloads the models
+3. Double-click **`start_live_captions.bat`**.
+
+`setup.bat` can be run again safely; it skips what is already there.
+
+### By hand
+
+With uv, run this in the repo folder:
 
 ```powershell
 uv sync
@@ -38,7 +53,7 @@ uv sync
 
 This creates `.venv` with the CUDA 12.8 build of PyTorch. The launch scripts find `.venv` by themselves.
 
-### With pip
+With pip instead:
 
 ```powershell
 python -m venv .venv
@@ -46,26 +61,23 @@ python -m venv .venv
 .venv\Scripts\python -m pip install -r requirements.txt
 ```
 
-### Using an existing environment
-
-You can use an environment you already have. It needs faster-whisper, transformers and a CUDA build of torch. Create
-`local.bat` in the repo folder (git ignores it) with:
+You can also use an environment you already have. It needs faster-whisper, transformers and a CUDA build of torch.
+Create `local.bat` in the repo folder (git ignores it) with:
 
 ```bat
 set "LIVE_CAPTIONS_PYTHON=C:\path\to\your\env\Scripts\python.exe"
 ```
 
-### Check the GPU
+To check the GPU, run the following. It should print `True` and the name of your GPU.
 
 ```powershell
 .venv\Scripts\python -c "import torch; print(torch.cuda.is_available(), torch.cuda.get_device_name(0))"
 ```
 
-This should print `True` and the name of your GPU.
-
 ## Download the models
 
-Double-click `download_models.bat`, or run `.venv\Scripts\python -m live_captions.download`. It downloads about 5.5 GB:
+`setup.bat` does this for you. To do it on its own, double-click `download_models.bat`, or run
+`.venv\Scripts\python -m live_captions.download`. It downloads about 5.5 GB:
 
 - Whisper large-v3 into `models\faster-whisper-large-v3`
 - NLLB-200 600M into `models\nllb-200-distilled-600M`
@@ -83,14 +95,20 @@ To try a smaller Whisper on a smaller GPU: `download_models.bat --whisper small.
 
 All settings are optional. To change them, copy these files (git ignores the copies):
 
+- **`terms.example.txt` → `terms.txt`** (`setup.bat` makes it for you):
+  - List names, acronyms and jargon you expect to hear in the call.
+  - Whisper spells these correctly much more often when they are listed.
+  - Change the list for each meeting, and keep it under about 100 terms.
 - **`config.example.toml` → `config.toml`:**
   - model names or folders
   - device
   - pause length
   - where recordings go
-  - fonts and opacity
-- **`terms.example.txt` → `terms.txt`:** names, acronyms and jargon you expect to hear in the call. Whisper spells these
-  correctly much more often when they are listed. Change the list for each meeting; keep it under about 100 terms.
+  - fonts
+  - hiding from screen sharing
+
+The window remembers its size, position, text size, opacity and English on/off by itself. It keeps them in
+`%APPDATA%\live-captions\window.json`.
 
 Command-line options override `config.toml`. Run `python -m live_captions --help` to see them.
 
@@ -98,51 +116,79 @@ Command-line options override `config.toml`. Run `python -m live_captions --help
 
 | What | How |
 |---|---|
-| Live, in a call | Double-click `start_live_captions.bat`. The models take 15–30 s to load; wait until the top bar says `ready`. |
+| Live, in a call | Double-click `start_live_captions.bat`. The models take 15–30 s to load. The light in the top-left turns green when it is ready. |
 | Rehearse without a call | Drag an audio or video file onto `rehearse.bat`. It plays the file and captions it. You can also run `rehearse.bat <file> [start seconds]`. |
 | Rehearse while presenting | Start a PowerPoint slideshow, then run `rehearse.bat`. Check whether the captions cover your slides and whether you can read them in time. |
 
-### Mouse
+### The window
 
-- **Scroll back:** use the mouse wheel on the window. The window keeps every caption since it started.
-  - While you are scrolled back, new lines do not pull the view down, and the top bar says `scrolled back · End = latest`.
-  - Press **End** to jump back to the latest line.
-- **Resize:**
-  - drag the right edge for width
-  - drag the bottom edge for height
-  - drag the bottom-right corner (the small grey square) for both
-- **Move:** drag the top bar (small grey text) or the yellow line at the bottom.
+- **Header:**
+  - **Status light:** amber while loading, green when live, grey when paused, red on an error.
+  - **Level meter:** moves when the call has sound, so you can tell at a glance that the tool hears the call.
+  - **Red `● REC` timer:** shows while recording.
+- **Buttons:** they appear in the header when the mouse is over the window, from left to right:
+  - **EN:** show or hide the English
+  - **mic:** caption your microphone too
+  - **text smaller / bigger**
+  - **compact:** Thai only, two lines
+  - **pause**
+  - **record:** click twice to start
+  - **help**
+  - **close**
+
+  Hover over a button to see what it does in the header.
+- **Captions:**
+  - The newest line is bright and older lines are dimmed.
+  - Your own lines (with **M**) are blue and start with "You ·".
+- **Scroll back:**
+  - Use the mouse wheel. The window keeps every caption since it started.
+  - While you are scrolled back, new lines do not pull the view down.
+  - Click **↓ Latest** or press **End** to go back to the newest line.
+- **Move:** drag the header or the yellow line.
+- **Resize:** drag the right edge, the bottom edge or the dotted bottom-right corner.
 - **Copy:** select text with the mouse, then press Ctrl+C.
-- **Right-click:** opens a menu with every command.
+- **Right-click** opens the menu. Besides every command above, it has:
+  - opacity
+  - hiding from screen sharing
+  - resetting the size and position
 
 ### Keys
 
-Click the caption window first.
+Click the caption window first. **F1** or **?** shows these in the window.
 
 | Key | Action |
 |---|---|
-| **R** | Start or stop recording |
+| **R** | Start or stop recording. To start, press it **twice**; stopping takes one press. |
 | **T** | Show or hide the English |
 | **+ / -** | Bigger or smaller text |
 | **C** | Compact mode: Thai only, about 2 lines; press again to go back |
 | **End** | Jump to the latest line |
 | **Space** | Pause captions |
-| **M** | Caption your own microphone too (off by default; your lines start with "(you)") |
-| **Esc** | Quit |
+| **M** | Caption your own microphone too (off by default) |
+| **F1** or **?** | Keys and controls |
+| **Esc** | Quit (press it **twice**, so a stray key press does not close the captions mid-call) |
 
-## ⚠️ Screen sharing in Zoom
+## ⚠️ Screen sharing
 
-- **Share only the PowerPoint window, not your whole screen.** If you share the whole screen, everyone in the call sees your captions.
-  - Sharing a single window does not show the caption window. This was tested with Zoom.
+- **The caption window is hidden from screen sharing and screenshots by default.**
+  - The others in the call do not see it, even if you share your whole screen.
+  - This uses the Windows setting `WDA_EXCLUDEFROMCAPTURE`, which needs Windows 10 version 2004 or newer.
+  - If it is not available, a message in the header says so.
+  - You can switch it off in the right-click menu, or with `hide_from_capture = false` in `config.toml`.
+- **Still share only the PowerPoint window, not the whole screen, when you can.** It is the safest choice.
+  - Try a test share once with your meeting app before an important call, because not every app has been tested.
+  - With Zoom, sharing a single window does not show the caption window.
 - If you have two screens, you can also move the caption window to the screen you are not sharing.
 
 ## Recording
 
-- **Captions alone save nothing.** The tool records only after you press **R**, and stops when you press R again or quit.
-- **Ask everyone for consent before you press R.**
+- **Captions alone save nothing.**
+  - Recording starts only after you press **R twice**. The first press shows a reminder to make sure everyone has agreed.
+  - It stops when you press R again or quit.
+- **Ask everyone for consent before you record.**
   - Recording other people without their consent may be illegal where you or they are, and it is unfair to them either way.
   - The tool does not make Zoom or Teams show that you are recording, so you must tell people yourself.
-- While it records, the top bar turns red and shows `● REC` and the time.
+- While it records, a red `● REC` timer shows in the header. When you stop, the header shows where the files went.
 - Each recording goes to `sessions\<date-time>\`:
   - **`audio.wav`:** 16 kHz stereo, with **left = the other side** (the speaker output) and **right = your microphone**
   - **`captions.txt`:** the English and Thai lines, with times from the start of the recording
@@ -171,6 +217,7 @@ Click the caption window first.
 ## Troubleshooting
 
 - **No captions:**
+  - Watch the level meter in the header. If it does not move while people talk, the tool does not hear the call.
   - Check the console window for a line like `[audio] speaker output: …`.
   - The call's audio must play through the Windows default output device.
 - **`CUDA is not available`:**
@@ -188,9 +235,10 @@ Click the caption window first.
 | Path | What |
 |---|---|
 | `live_captions/` | The program. `cli.py` is the entry point. The other modules are `audio.py`, `captioner.py` (Whisper + NLLB), `recorder.py`, `window.py` and `config.py`. |
+| `setup.bat` | One-click setup: packages, GPU check, models, `terms.txt` |
 | `start_live_captions.bat`, `rehearse.bat`, `download_models.bat` | Launchers. `scripts\find_python.bat` picks the Python. |
 | `config.example.toml`, `terms.example.txt` | Examples to copy to `config.toml` and `terms.txt`. |
-| `tests/test_basics.py` | Quick checks without a GPU: `python -m unittest discover -s tests` |
+| `tests/test_basics.py`, `tests/test_window_logic.py` | Quick checks without a GPU or models: `python -m unittest discover -s tests` |
 | `tests/test_pipeline.py` | Headless check of the whole pipeline on an audio file, with timings: `python -X utf8 tests/test_pipeline.py <file>` |
 | `tests/test_window.py` | Window check with screenshots: scrolling back and resizing |
 | `tests/make_sample_audio.ps1` | Makes `tests\sample.wav`, an English sample from Windows text-to-speech |
