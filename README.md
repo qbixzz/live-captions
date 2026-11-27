@@ -286,3 +286,12 @@ To build the zip on your own computer:
 ```powershell
 powershell -ExecutionPolicy Bypass -File tools\build_release.ps1 -Version v0.2.0
 ```
+
+## License
+
+- **Live Captions** (this code) is under the [MIT License](LICENSE).
+- **The models** are not part of this repository or the release zip. Setup downloads them from Hugging Face, and each
+  has its own license:
+  - **Whisper large-v3** (OpenAI) and the **faster-whisper** conversion: MIT.
+  - **NLLB-200** (Meta): [CC BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/), **non-commercial use only**.
+    For commercial use, swap in a translation model whose license allows it (`nllb` in `config.toml`).

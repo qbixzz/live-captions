@@ -165,3 +165,11 @@ English: [README.md](README.md) ขั้นตอนติดตั้งละ
 - **ทดสอบโดยไม่ต้องมีคน:**
   - `tests\make_sample_audio.ps1` สร้างไฟล์เสียงอังกฤษตัวอย่างด้วยเสียงสังเคราะห์ของ Windows
   - `python -X utf8 tests\test_pipeline.py tests\sample.wav` ทดสอบทั้งระบบแบบไม่มีหน้าต่าง พร้อมวัดเวลา
+
+## License
+
+- **โค้ดของ Live Captions** ใช้ [MIT License](LICENSE)
+- **โมเดลไม่ได้อยู่ใน repo หรือใน zip** ตอนติดตั้งจะโหลดจาก Hugging Face และแต่ละตัวมี license ของตัวเอง:
+  - **Whisper large-v3** (OpenAI) และ **faster-whisper:** MIT
+  - **NLLB-200** (Meta): [CC BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/) **ใช้เชิงพาณิชย์ไม่ได้**
+    - ถ้าจะใช้เชิงพาณิชย์ ให้เปลี่ยนไปใช้โมเดลแปลที่ license อนุญาต โดยแก้ค่า `nllb` ใน `config.toml`
