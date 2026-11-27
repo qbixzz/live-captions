@@ -1,6 +1,6 @@
 [project]
 name = "live-captions"
-version = "0.1.0"
+version = "0.2.0"
 description = "Live English captions with a Thai translation in an always-on-top window, from the computer's speaker output. Runs locally on an NVIDIA GPU."
 readme = "README.md"
 requires-python = ">=3.11"
@@ -25,6 +25,25 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
 packages = ["live_captions"]
+
+[tool.setuptools.package-data]
+live_captions = ["assets/*"]
+
+[tool.uv]
+# uv.lock (used by setup.bat and the app's first-run setup) installs the versions this was tested with.
+constraint-dependencies = [
+    "torch==2.8.0",
+    "transformers==4.57.6",
+    "faster-whisper==1.2.1",
+    "ctranslate2==4.9.0",
+    "tokenizers==0.22.2",
+    "huggingface-hub==0.36.2",
+    "numpy==2.4.6",
+    "scipy==1.17.1",
+    "PyAudioWPatch==0.2.12.9",
+    "onnxruntime==1.32.0",
+    "av==18.1.0",
+]
 
 # "uv sync" takes torch from the PyTorch CUDA 12.8 index (the PyPI build for Windows is CPU-only).
 [tool.uv.sources]

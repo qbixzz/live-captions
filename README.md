@@ -20,15 +20,35 @@ Everything runs on your own computer, on the GPU. No audio or text is sent anywh
   - You need a recent NVIDIA driver: version 570 or newer, for the CUDA 12.8 build of PyTorch.
   - You do not need to install the CUDA toolkit. PyTorch and CTranslate2 bring the CUDA libraries they need.
   - The CPU works only for testing (`--device cpu`). It is far too slow for live captions with large-v3.
-- **Python 3.11 or newer.** [uv](https://docs.astral.sh/uv/) is the easiest way to get it.
-- **About 6 GB of disk** for the models, plus about 5 GB for PyTorch.
-- **Tested versions:** Python 3.11, torch 2.8.0+cu128, faster-whisper 1.2.1, transformers 4.57. `uv.lock` pins newer
-  versions that resolve cleanly but were not tested live.
+- **About 13 GB of disk:** about 6 GB for the models and about 7 GB for Python and PyTorch.
+  - The download is about 10 GB.
+  - The app installs Python by itself. From the source code you need Python 3.11, most easily through [uv](https://docs.astral.sh/uv/).
+- **Tested versions:** Python 3.11, torch 2.8.0+cu128, faster-whisper 1.2.1, transformers 4.57.6. `uv.lock` installs exactly these.
 - **[ffmpeg](https://ffmpeg.org/) on PATH**, needed only for rehearsal and the tests. Install it with `winget install Gyan.FFmpeg`.
 
 ## Install
 
-### Quick setup
+### The app (recommended)
+
+1. Download `LiveCaptions-<version>-win64.zip` from the [Releases](../../releases) page. The zip is about 25 MB.
+2. Extract it to a folder of your own, for example `Documents\LiveCaptions`.
+   - Right-click the zip and choose **Extract All**.
+   - Don't run it from inside the zip, and don't put it in `Program Files`.
+3. Double-click **`Live Captions.exe`**. The first time, a setup window opens:
+   - It installs Python, the packages and the models, about 10 GB in 10–30 minutes.
+   - It checks the graphics card.
+   - It can add Live Captions to the Start menu and the desktop.
+   - After that, Live Captions opens straight away.
+
+Notes:
+
+- **Setup stopped?** Run it again; the parts already done are kept.
+- **Repair:** `Live Captions.exe --setup` runs the setup again.
+- **New version:** extract it to a new folder. To skip downloading the models again, copy the `models` folder from the old one first.
+- **Rehearsal:** drop an audio or video file on `Live Captions.exe` to rehearse with it.
+- **Errors** are written to `logs\live-captions.log`.
+
+### From the source code
 
 1. Install [uv](https://docs.astral.sh/uv/) if you don't have it. Run this in PowerShell:
 
@@ -107,7 +127,7 @@ All settings are optional. To change them, copy these files (git ignores the cop
   - fonts
   - hiding from screen sharing
 
-The window remembers its size, position, text size, opacity and English on/off by itself. It keeps them in
+The window remembers its size, position, text size, opacity, pin and English on/off by itself. It keeps them in
 `%APPDATA%\live-captions\window.json`.
 
 Command-line options override `config.toml`. Run `python -m live_captions --help` to see them.
@@ -133,7 +153,9 @@ Command-line options override `config.toml`. Run `python -m live_captions --help
   - **compact:** Thai only, two lines
   - **pause**
   - **record:** click twice to start
+  - **pin:** keep the window on top of other windows, or let them cover it
   - **help**
+  - **minimize:** to the taskbar; click its taskbar button to bring it back
   - **close**
 
   Hover over a button to see what it does in the header.
@@ -165,6 +187,7 @@ Click the caption window first. **F1** or **?** shows these in the window.
 | **End** | Jump to the latest line |
 | **Space** | Pause captions |
 | **M** | Caption your own microphone too (off by default) |
+| **P** | Keep on top of other windows, or not (pin / unpin) |
 | **F1** or **?** | Keys and controls |
 | **Esc** | Quit (press it **twice**, so a stray key press does not close the captions mid-call) |
 
@@ -235,10 +258,31 @@ Click the caption window first. **F1** or **?** shows these in the window.
 | Path | What |
 |---|---|
 | `live_captions/` | The program. `cli.py` is the entry point. The other modules are `audio.py`, `captioner.py` (Whisper + NLLB), `recorder.py`, `window.py` and `config.py`. |
-| `setup.bat` | One-click setup: packages, GPU check, models, `terms.txt` |
+| `setup.bat` | One-click setup from the source code: packages, GPU check, models, `terms.txt` |
+| `launcher/Launcher.cs` | `Live Captions.exe`: first-run setup window, then starts the app without a console |
+| `tools/build_release.ps1` | Builds the release zip into `dist\` |
+| `tools/make_icon.py` | Draws `live_captions/assets/app.ico` |
+| `.github/workflows/release.yml` | Builds the zip on GitHub; pushing a tag like `v0.2.0` publishes it as a release |
 | `start_live_captions.bat`, `rehearse.bat`, `download_models.bat` | Launchers. `scripts\find_python.bat` picks the Python. |
 | `config.example.toml`, `terms.example.txt` | Examples to copy to `config.toml` and `terms.txt`. |
 | `tests/test_basics.py`, `tests/test_window_logic.py` | Quick checks without a GPU or models: `python -m unittest discover -s tests` |
 | `tests/test_pipeline.py` | Headless check of the whole pipeline on an audio file, with timings: `python -X utf8 tests/test_pipeline.py <file>` |
 | `tests/test_window.py` | Window check with screenshots: scrolling back and resizing |
 | `tests/make_sample_audio.ps1` | Makes `tests\sample.wav`, an English sample from Windows text-to-speech |
+
+## Making a release
+
+1. Update the version in `pyproject.toml` and `live_captions/__init__.py`, then commit.
+2. Tag and push:
+
+   ```powershell
+   git tag v0.2.0
+   git push origin v0.2.0
+   ```
+3. The **Release** workflow builds `LiveCaptions-v0.2.0-win64.zip` and publishes it on the Releases page.
+
+To build the zip on your own computer:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File tools\build_release.ps1 -Version v0.2.0
+```

@@ -99,11 +99,14 @@ class TestWindow(unittest.TestCase):
         self.win.font(4)
         self.win.toggle_en()
         self.win.set_opacity(0.8)
+        self.win.toggle_pin()
         self.win.quit()
         self.make()
         self.assertEqual(self.win.size, 26)
         self.assertFalse(self.win.show_en)
         self.assertAlmostEqual(self.win.opacity, 0.8)
+        self.assertFalse(self.win.pinned)
+        self.assertEqual(self.win.root.attributes("-topmost"), 0)
 
     def test_error_status(self):
         self.q.put(("status", "error: CUDA is not available"))

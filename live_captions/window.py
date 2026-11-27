@@ -26,6 +26,7 @@ ICONS = {  # Segoe Fluent Icons / MDL2 code points, with a plain-text fallback
     "rec": ("", "●"), "mic": ("", "Mic"), "smaller": ("", "A-"), "bigger": ("", "A+"),
     "compact": ("", "▭"), "expand": ("", "▢"), "pause": ("", "II"), "play": ("", "▶"),
     "help": ("", "?"), "close": ("", "×"),
+    "pin": ("\uE718", "Pin"), "minimize": ("\uE921", "_"),
 }
 HELP = [
     ("R", "Start or stop recording (press twice to start)"),
@@ -38,6 +39,7 @@ HELP = [
     ("Mouse wheel", "Scroll back through the session"),
     ("Drag", "Header or yellow line: move · edges and corner: resize"),
     ("Right-click", "Menu: opacity, screen-share hiding, reset position"),
+    ("P", "Keep on top of other windows, or not"),
     ("Esc  Esc", "Quit (press twice)"),
 ]
 
@@ -45,6 +47,18 @@ HELP = [
 def default_state_file():
     base = os.environ.get("APPDATA") or os.path.expanduser("~")
     return os.path.join(base, "live-captions", "window.json")
+
+
+ICON = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets", "app.ico")
+
+
+def _app_id():
+    """Own taskbar identity, so the taskbar shows this app's icon instead of Python's."""
+    if sys.platform == "win32":
+        try:
+            ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID("LiveCaptions.App")
+        except Exception:
+            pass
 
 
 def _dpi_aware():
@@ -65,16 +79,23 @@ class Window:
         self.size = int(st.get("size", settings.font_size))
         self.show_en = bool(st.get("show_en", True))
         self.opacity = float(st.get("opacity", settings.opacity))
+        self.pinned = bool(st.get("pinned", True))
         self.compact, self.lines, self.help_on = False, [], False
         self.state, self.state_msg, self.error = "loading", "Starting…", None
         self._toast, self._tip, self._armed = None, None, {}
         self._hover, self._level = False, 0.0
 
         _dpi_aware()
+        _app_id()
         r = self.root = tk.Tk()
         r.title("Live captions")
         r.overrideredirect(True)
-        r.attributes("-topmost", True)
+        r.attributes("-topmost", self.pinned)
+        if os.path.isfile(ICON):
+            try:
+                r.iconbitmap(default=ICON)
+            except Exception:
+                pass
         r.attributes("-alpha", self.opacity)
         r.configure(bg=C["border"])
         self.k = r.winfo_fpixels("1i") / 96.0
@@ -149,7 +170,9 @@ class Window:
             ("compact", "Compact: Thai only (C)", self.toggle_compact),
             ("pause", "Pause captions (Space)", self.toggle_pause),
             ("rec", "Record (R, press twice to start)", self.toggle_rec),
+            ("pin", "Keep on top of other windows (P)", self.toggle_pin),
             ("help", "Keys and controls (F1 or ?)", self.toggle_help),
+            ("minimize", "Minimize to the taskbar", self.minimize),
             ("close", "Quit", self.quit),
         ]:
             b = tk.Label(self.btns, bg=C["bg"], fg=C["muted"], cursor="hand2", width=3, pady=self.px(2))
@@ -169,17 +192,18 @@ class Window:
         return plain, (self.latin, size - 1, "bold")
 
     def _paint_buttons(self):
-        on = {"en": self.show_en, "mic": self.cap.mic_captions, "pause": self.cap.paused, "rec": self.rec.on}
+        on = {"en": self.show_en, "mic": self.cap.mic_captions, "pause": self.cap.paused, "rec": self.rec.on,
+              "pin": self.pinned}
         for name, b in self.buttons.items():
             if name == "en":
                 b.configure(text="EN", font=(self.latin, 9, "bold"))
             else:
                 icon = {"compact": "expand" if self.compact else "compact", "pause": "play" if self.cap.paused else "pause"}.get(name, name)
-                txt, f = self._icon(icon, 10 if name in ("close", "help") else 11)
+                txt, f = self._icon(icon, 10 if name in ("close", "help", "minimize") else 11)
                 b.configure(text=txt, font=f)
             color = C["muted"]
             if on.get(name):
-                color = {"rec": C["err"], "pause": C["warn"], "mic": C["me"]}.get(name, C["th"])
+                color = {"rec": C["err"], "pause": C["warn"], "mic": C["me"], "pin": C["me"]}.get(name, C["th"])
             if name == "rec" and not self.rec.on and self._armed.get("rec", 0) > time.time():
                 color = C["err"]
             b.configure(fg=color)
@@ -224,7 +248,7 @@ class Window:
         keys = {"r": self.toggle_rec, "m": self.toggle_mic, "t": self.toggle_en, "plus": lambda: self.font(2),
                 "equal": lambda: self.font(2), "minus": lambda: self.font(-2), "space": self.toggle_pause,
                 "c": self.toggle_compact, "Escape": self.escape, "End": self.to_end, "F1": self.toggle_help,
-                "question": self.toggle_help, "KP_Add": lambda: self.font(2), "KP_Subtract": lambda: self.font(-2)}
+                "question": self.toggle_help, "p": self.toggle_pin, "KP_Add": lambda: self.font(2), "KP_Subtract": lambda: self.font(-2)}
         for k, f in keys.items():
             for w in (r, self.text):
                 w.bind(f"<{k}>" if len(k) > 1 else k, lambda e, f=f: self._key(f))
@@ -236,7 +260,7 @@ class Window:
     def _build_menu(self):
         m = self.menu = tk.Menu(self.root, tearoff=0)
         self.v_en, self.v_mic, self.v_pause = tk.BooleanVar(), tk.BooleanVar(), tk.BooleanVar()
-        self.v_hide, self.v_op = tk.BooleanVar(value=self.hide_capture), tk.IntVar()
+        self.v_hide, self.v_op, self.v_pin = tk.BooleanVar(value=self.hide_capture), tk.IntVar(), tk.BooleanVar()
         m.add_command(label="Start / stop recording\tR", command=self.toggle_rec)
         m.add_separator()
         m.add_checkbutton(label="Show English\tT", variable=self.v_en, command=self.toggle_en)
@@ -250,6 +274,8 @@ class Window:
             op.add_radiobutton(label=f"{pct}%", value=pct, variable=self.v_op, command=lambda p=pct: self.set_opacity(p / 100))
         m.add_cascade(label="Opacity", menu=op)
         m.add_separator()
+        m.add_checkbutton(label="Keep on top\tP", variable=self.v_pin, command=self.toggle_pin)
+        m.add_command(label="Minimize", command=self.minimize)
         m.add_checkbutton(label="Hide from screen sharing", variable=self.v_hide,
                           command=lambda: self.set_capture_hidden(self.v_hide.get()))
         m.add_command(label="Reset size and position", command=self.reset_geometry)
@@ -262,6 +288,7 @@ class Window:
             self.v_mic.set(self.cap.mic_captions)
             self.v_pause.set(self.cap.paused)
             self.v_op.set(int(round(self.opacity * 100)))
+            self.v_pin.set(self.pinned)
             m.tk_popup(e.x_root, e.y_root)
         self.root.bind_all("<Button-3>", popup)
 
@@ -276,6 +303,21 @@ class Window:
     def _native(self):
         if sys.platform != "win32":
             return
+        self.root.update_idletasks()
+        try:  # a taskbar button (WS_EX_APPWINDOW instead of WS_EX_TOOLWINDOW), so the window can be minimized and found again
+            u, hwnd = ctypes.windll.user32, self._hwnd()
+            ex = u.GetWindowLongW(hwnd, -20)
+            u.SetWindowLongW(hwnd, -20, (ex & ~0x80) | 0x40000)
+            self.root.withdraw()  # the new style takes effect when the window is shown again
+            self.root.after(10, self._native2)
+            return
+        except Exception:
+            pass
+        self._native2()
+
+    def _native2(self):
+        self.root.deiconify()
+        self.root.attributes("-topmost", self.pinned)
         self.root.update_idletasks()
         try:  # Windows 11: rounded corners
             pref = ctypes.c_int(2)  # DWMWCP_ROUND
@@ -349,7 +391,7 @@ class Window:
         h = self._saved[0] if self.compact else self.h
         show_en = self._saved[1] if self.compact else self.show_en
         st = dict(x=self.root.winfo_x(), y=self.root.winfo_y(), w=self.w, h=h, size=self.size, show_en=show_en,
-                  opacity=self.opacity)
+                  opacity=self.opacity, pinned=self.pinned)
         try:
             os.makedirs(os.path.dirname(self.state_file), exist_ok=True)
             with open(self.state_file, "w", encoding="utf-8") as f:
@@ -408,7 +450,8 @@ class Window:
             self.placeholder.place_forget()
             return
         if self.state == "error":
-            txt, fg = f"Something went wrong\n{self.error}\n\nThe console window has the details.", C["err"]
+            where = f"The details are in {self.s.log_file}" if self.s.log_file else "The console window has the details."
+            txt, fg = f"Something went wrong\n{self.error}\n\n{where}", C["err"]
         elif self.state == "loading":
             txt, fg = f"{self.state_msg}\nLoading the speech and translation models takes about 20 seconds.", C["muted"]
         else:
@@ -620,6 +663,22 @@ class Window:
         self.size = min(44, max(12, self.size + d))
         self.fonts()
         self.toast(f"Text size {self.size}")
+
+    def toggle_pin(self):
+        self.pinned = not self.pinned
+        self.root.attributes("-topmost", self.pinned)
+        self.toast("Kept on top of other windows" if self.pinned else "Not kept on top: other windows can cover it")
+        self._paint_buttons()
+
+    def minimize(self):
+        """Minimize to the taskbar; click the taskbar button to bring it back."""
+        if sys.platform == "win32":
+            try:
+                ctypes.windll.user32.ShowWindow(self._hwnd(), 6)  # SW_MINIMIZE
+                return
+            except Exception:
+                pass
+        self.root.iconify()
 
     def set_opacity(self, v):
         self.opacity = v

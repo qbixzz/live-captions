@@ -5,6 +5,9 @@ echo.
 echo   Live captions setup
 echo   ===================
 echo.
+set "UV=%~dp0tools\uv.exe"
+if exist "%UV%" goto :have_uv
+set "UV=uv"
 where uv >nul 2>nul
 if errorlevel 1 (
   echo uv is not installed. Install it with this command in PowerShell, then run setup.bat again:
@@ -14,8 +17,9 @@ if errorlevel 1 (
   pause
   exit /b 1
 )
+:have_uv
 echo [1/3] Installing the Python packages. The first time this downloads about 5 GB.
-uv sync
+"%UV%" sync --frozen --no-install-project
 if errorlevel 1 (
   echo Installing the packages failed. See the messages above.
   pause
@@ -27,7 +31,7 @@ echo [2/3] Checking the GPU
 if errorlevel 1 echo       Update the NVIDIA driver to version 570 or newer. See README.md, Requirements.
 echo.
 echo [3/3] Downloading the models into models\, about 5.5 GB. Files already there are skipped.
-.venv\Scripts\python -X utf8 -m live_captions.download
+.venv\Scripts\python -X utf8 -m live_captions.download --if-missing
 if errorlevel 1 (
   echo Downloading the models failed. See the messages above, then run setup.bat again.
   pause

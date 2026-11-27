@@ -1,0 +1,45 @@
+name: Release
+
+# Push a tag like v0.2.0 to build the Windows zip and publish it as a GitHub release.
+# "Run workflow" on the Actions tab builds the zip without a release (download it from the run's artifacts).
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Quick checks
+        shell: pwsh
+        run: |
+          python -m pip install --quiet numpy scipy
+          python -m unittest discover -s tests -p "test_basics.py" -v
+
+      - name: Build the zip
+        shell: pwsh
+        run: ./tools/build_release.ps1 -Version "${{ github.ref_type == 'tag' && github.ref_name || 'dev' }}"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: LiveCaptions-win64
+          path: dist/*.zip
+
+      - name: Publish the release
+        if: github.ref_type == 'tag'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*.zip
+          generate_release_notes: true
+          body: |
+            **Download `LiveCaptions-${{ github.ref_name }}-win64.zip` below**, extract it to a folder of your own
+            (for example Documents), and double-click **Live Captions.exe**.
+
+            The first start installs Python, the packages and the models (about 10 GB, 10–30 minutes).
+            You need Windows 10 or 11 and an NVIDIA graphics card. See README.md in the zip.

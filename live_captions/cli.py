@@ -26,6 +26,7 @@ def parser():
     ap.add_argument("--sessions", help="folder for recordings (default: sessions)")
     ap.add_argument("--show-in-capture", action="store_true",
                     help="let screen sharing and screenshots see the window (it is hidden by default)")
+    ap.add_argument("--log", metavar="FILE", help="write all output to this file instead of the console")
     ap.add_argument("--quit-after", type=float, default=0, help="close by itself after this many seconds (for tests)")
     ap.add_argument("--snap", help="with --quit-after: save a screenshot here 2 s before closing (for tests)")
     return ap
@@ -65,9 +66,28 @@ def describe(s):
     return "\n".join(lines)
 
 
+def log_to_file(path=None):
+    """Send all output to a log file: when asked (--log, as the app launcher does), or when there is no console."""
+    if not path:
+        if sys.stdout is not None and sys.stderr is not None:
+            return ""
+        path = os.path.join("logs", "live-captions.log")
+    import datetime
+    path = os.path.abspath(path)
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    if os.path.isfile(path) and os.path.getsize(path) > 2_000_000:  # keep it small: start over past 2 MB
+        os.replace(path, path + ".old")
+    f = open(path, "a", encoding="utf-8", buffering=1)
+    sys.stdout = sys.stderr = f
+    print(f"\n--- {datetime.datetime.now():%Y-%m-%d %H:%M:%S} ---", flush=True)
+    return path
+
+
 def main(argv=None):
     a = parser().parse_args(argv)
+    log = log_to_file(a.log)
     s = settings_from(a)
+    s.log_file = log
     print(describe(s), flush=True)
     ui_q, rec = queue.Queue(), Recorder(s.path(s.sessions_dir))
     audio = Audio(a.sim, a.start, mute=a.mute)

@@ -48,6 +48,8 @@ class Settings:
     latin_font: str = "Segoe UI"
     opacity: float = 1.0
     hide_from_capture: bool = True   # keep the window out of screen sharing and screenshots (Windows 10 2004 or newer)
+    # set at run time, not from config.toml
+    log_file: str = ""               # where output goes when there is no console
 
     def path(self, p):
         p = os.path.expanduser(os.path.expandvars(p))
