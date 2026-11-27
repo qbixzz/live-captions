@@ -1,0 +1,21 @@
+# recordings: never commit them
+sessions/
+
+# your own settings and terms (start from config.example.toml and terms.example.txt)
+config.toml
+terms.txt
+local.bat
+
+# models and environments
+models/
+.venv/
+
+# test output
+tests/out/
+tests/sample*.wav
+
+__pycache__/
+*.pyc
+*.egg-info/
+build/
+dist/

@@ -1,0 +1,13 @@
+# For pip users (uv users: "uv sync" reads pyproject.toml instead).
+# Install torch with CUDA first, then the rest:
+#   pip install torch --index-url https://download.pytorch.org/whl/cu128
+#   pip install -r requirements.txt
+faster-whisper>=1.1
+transformers>=4.56
+torch>=2.6
+sentencepiece
+huggingface_hub
+numpy
+scipy
+pillow
+PyAudioWPatch>=0.2.12; sys_platform == 'win32'

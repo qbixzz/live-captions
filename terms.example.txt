@@ -1,0 +1,9 @@
+# Terms for Whisper: names, acronyms and jargon you expect to hear in the call, so they come out spelled right.
+# Copy this file to terms.txt (which git ignores) and replace these examples with your own.
+# One or more terms per line, separated by commas. Lines starting with # are ignored.
+# Keep it short: Whisper only reads roughly the last 220 tokens (about 100 to 150 terms at most).
+
+Zoom, Microsoft Teams, PowerPoint
+API, SDK, OAuth, OpenID Connect, single sign-on
+Kubernetes, PostgreSQL, GitHub, CI/CD
+KPI, roadmap, stakeholder, proof of concept

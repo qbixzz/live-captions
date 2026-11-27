@@ -1,0 +1,36 @@
+[project]
+name = "live-captions"
+version = "0.1.0"
+description = "Live English captions with a Thai translation in an always-on-top window, from the computer's speaker output. Runs locally on an NVIDIA GPU."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "faster-whisper>=1.1",
+    "transformers>=4.56",
+    "torch>=2.6",
+    "sentencepiece",
+    "huggingface_hub",
+    "numpy",
+    "scipy",
+    "pillow",
+    "PyAudioWPatch>=0.2.12; sys_platform == 'win32'",
+]
+
+[project.scripts]
+live-captions = "live_captions.cli:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["live_captions"]
+
+# "uv sync" takes torch from the PyTorch CUDA 12.8 index (the PyPI build for Windows is CPU-only).
+[tool.uv.sources]
+torch = { index = "pytorch-cu128" }
+
+[[tool.uv.index]]
+name = "pytorch-cu128"
+url = "https://download.pytorch.org/whl/cu128"
+explicit = true

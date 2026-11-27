@@ -1,0 +1,32 @@
+# Settings for live captions. Copy this file to config.toml (which git ignores) and change what you need;
+# anything you leave out keeps the default shown here. Relative paths are relative to the folder of config.toml.
+
+[models]
+# Whisper: a size ("large-v3", "large-v3-turbo", "distil-large-v3", "medium.en", "small.en"), a Hugging Face id,
+# or a local folder. If models/faster-whisper-<size> exists (see download_models.bat) it is used automatically.
+whisper = "large-v3"
+# Translation: a Hugging Face id or a local folder. models/nllb-200-distilled-600M is used automatically if it exists.
+nllb = "facebook/nllb-200-distilled-600M"
+# "cuda" for an NVIDIA GPU. "cpu" works but is far too slow for live use with large-v3.
+device = "cuda"
+# "auto" = float16 on cuda, int8 on cpu. Older GPUs without fast float16 can try "int8_float16".
+compute_type = "auto"
+
+[captions]
+# Names, acronyms and jargon you expect to hear, so Whisper spells them right. See terms.example.txt.
+terms_file = "terms.txt"
+# Optional sentence that goes before the terms, e.g. "A project meeting about cloud hosting."
+context = ""
+# A caption line ends after this many seconds of quiet, or at max_len seconds of speech (cut at the quietest point).
+pause = 0.45
+max_len = 8.0
+
+[recording]
+# Recordings (only after you press R) go to <sessions_dir>/<date-time>/audio.wav and captions.txt.
+sessions_dir = "sessions"
+
+[window]
+font_size = 22
+thai_font = "Leelawadee UI"
+latin_font = "Segoe UI"
+opacity = 0.94
