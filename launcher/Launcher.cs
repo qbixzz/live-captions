@@ -1,6 +1,6 @@
 // Live Captions launcher ("Live Captions.exe" in the release zip).
 //   First run: a setup window installs Python and the packages (uv sync) and downloads the models, then starts the app.
-//   Later runs: starts the app (pythonw, no console window) straight away.
+//   Later runs: starts the app straight away, with no console window.
 //   Drop an audio or video file on the exe to rehearse with it.  "Live Captions.exe --setup" runs the setup again.
 //   Unattended setup: --setup --auto [--no-shortcuts]
 // Written for the C# 5 compiler that comes with Windows (.NET Framework 4); tools/build_release.ps1 builds it.
@@ -70,12 +70,16 @@ static class Launcher
 
     static bool StartApp(string dir, string sim)
     {
-        string py = Path.Combine(dir, @".venv\Scripts\pythonw.exe");
+        // Not pythonw.exe: in a venv made by uv, Scripts\pythonw.exe is the same console program as python.exe, so it would
+        // open a terminal window. python.exe with CreateNoWindow gets a hidden console instead, and the real Python it starts
+        // inherits it; all output goes to the log file.
+        string py = Path.Combine(dir, @".venv\Scripts\python.exe");
         string args = "-X utf8 -m live_captions --log logs\\live-captions.log";
         if (sim != null) args += " --sim \"" + sim + "\"";
         ProcessStartInfo psi = new ProcessStartInfo(py, args);
         psi.WorkingDirectory = dir;
         psi.UseShellExecute = false;
+        psi.CreateNoWindow = true;
         Process p;
         try { p = Process.Start(psi); }
         catch (Exception e)

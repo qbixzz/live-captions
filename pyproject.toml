@@ -1,6 +1,6 @@
 [project]
 name = "live-captions"
-version = "0.2.0"
+version = "0.2.1"
 description = "Live English captions with a Thai translation in an always-on-top window, from the computer's speaker output. Runs locally on an NVIDIA GPU."
 readme = "README.md"
 license = { text = "MIT" }
